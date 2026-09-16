@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Labeler · 图片框标注</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+        Arial, "Noto Sans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      --color-primary: #1677ff;
+      --color-primary-hover: #4096ff;
+      --color-primary-active: #0958d9;
+      --color-success: #52c41a;
+      --color-warning: #faad14;
+      --color-error: #ff4d4f;
+      --color-text: #1f1f1f;
+      --color-text-secondary: #595959;
+      --color-border: #d9d9d9;
+      --color-split: #f0f0f0;
+      --color-bg-layout: #f5f5f5;
+      --color-bg-container: #ffffff;
+      --color-bg-elevated: #ffffff;
+      --single-color: #1677ff;
+      --overall-color: #fa8c16;
+      --card-width: 240px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--color-text); background: var(--color-bg-layout); font-size: 14px; }
+    button, input { font: inherit; }
+    select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; color: #bfbfbf; background: #f5f5f5; opacity: 1; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid rgba(22,119,255,.22); outline-offset: 2px;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20; background: #fff;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .topline {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      min-height: 56px; padding: 0 20px;
+    }
+    h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
+    .summary { display: flex; gap: 14px; color: #66717b; font-size: 12px; white-space: nowrap; }
+    .session-controls { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .user-pill { padding: 5px 9px; color: #075ea8; background: #eaf4ff; border-radius: 999px; font-size: 12px; font-weight: 650; }
+    .dataset-nav {
+      min-height: 38px; padding: 10px 20px; color: #40505b; background: #f7f8f9;
+      border-top: 1px solid #edf0f2; border-bottom: 1px solid #e1e5e8; font-size: 12px;
+    }
+    .tabs { display: flex; gap: 2px; padding: 0 20px; overflow-x: auto; }
+    .tab {
+      min-width: 108px; padding: 11px 14px 10px; color: #4d5963; background: transparent;
+      border: 0; border-bottom: 3px solid transparent; text-align: center;
+    }
+    .tab span { margin-left: 4px; color: #7a848d; font-size: 12px; }
+    .tab.active { color: #075ea8; border-bottom-color: #075ea8; font-weight: 650; }
+    .toolbar {
+      position: sticky; top: 136px; z-index: 15; display: flex; align-items: center;
+      gap: 8px; padding: 10px 20px; background: rgba(242, 244, 245, .97);
+      border-bottom: 1px solid #d9dee2;
+    }
+    .button {
+      min-height: 32px; padding: 0 15px; color: var(--color-text);
+      background: var(--color-bg-container); border: 1px solid var(--color-border);
+      border-radius: 6px; transition: color .2s, border-color .2s, background .2s, box-shadow .2s;
+    }
+    .button:hover:not(:disabled) { color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+    .button:active:not(:disabled) { color: var(--color-primary-active); border-color: var(--color-primary-active); }
+    .primary { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
+    .primary:hover:not(:disabled) { color: #fff; background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+    .primary:active:not(:disabled) { color: #fff; background: var(--color-primary-active); border-color: var(--color-primary-active); }
+    .danger { color: #cf1322; }
+    .toolbar input[type="search"] {
+      width: min(420px, 42vw); height: 34px; padding: 0 10px; color: inherit;
+      background: #fff; border: 1px solid #bac2c9; border-radius: 5px;
+    }
+    .toolbar select { height: 34px; padding: 0 30px 0 10px; color: inherit; background: #fff; border: 1px solid #bac2c9; border-radius: 5px; }
+    .hidden { display: none !important; }
+    .swatches { display: flex; align-items: center; gap: 5px; }
+    .swatch {
+      width: 25px; height: 25px; padding: 0; background: var(--swatch);
+      border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #aeb7be;
+    }
+    .swatch.active { box-shadow: 0 0 0 2px #1b5682; }
+    .visible-count { margin-left: auto; color: #59646e; font-size: 13px; white-space: nowrap; }
+    .thumb-size { display: flex; align-items: center; gap: 5px; color: #68737c; }
+    .thumb-size span { font-size: 15px; line-height: 1; }
+    .thumb-size span:last-child { font-size: 21px; }
+    .thumb-size input { width: 108px; accent-color: #075ea8; }
+    .pager { display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .pager .icon-button { width: 34px; height: 34px; font-size: 21px; }
+    .page-info { min-width: 108px; color: #59646e; font-size: 12px; text-align: center; white-space: nowrap; }
+    .pager-bottom { padding: 20px 0 4px; }
+    .notice {
+      display: none; padding: 9px 20px; color: #244b38; background: #e4f3ea;
+      white-space: pre-wrap;
+    }
+    .notice.error { color: #772d29; background: #f8e5e3; }
+    .toast-host-global {
+      position: fixed; top: 72px; left: 50%; z-index: 700; display: none;
+      width: min(520px, calc(100vw - 32px)); transform: translateX(-50%);
+    }
+    .toast-host-global.visible, .modal-toast-host.visible { display: block; }
+    .toast {
+      display: none; align-items: flex-start; gap: 12px; width: 100%; padding: 12px 14px;
+      color: var(--color-text); background: #f6ffed; border: 1px solid #b7eb8f;
+      border-left: 4px solid var(--color-success); border-radius: 8px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.08), 0 9px 28px rgba(0,0,0,.05);
+      font-size: 13px;
+    }
+    .toast.visible { display: flex; }
+    .toast.error { background: #fff2f0; border-color: #ffccc7; border-left-color: var(--color-error); }
+    .toast-icon {
+      display: grid; flex: 0 0 auto; place-items: center; width: 24px; height: 24px;
+      color: #fff; background: var(--color-success); border-radius: 50%; font-size: 15px;
+      font-weight: 700; line-height: 1;
+    }
+    .toast.error .toast-icon { background: var(--color-error); }
+    .toast-section { min-width: 0; flex: 1; }
+    .toast-title { display: block; margin-bottom: 2px; color: #135200; font-size: 14px; line-height: 22px; }
+    .toast.error .toast-title { color: #a8071a; }
+    .toast-description { display: block; overflow-wrap: anywhere; color: var(--color-text-secondary); line-height: 20px; }
+    .toast-close {
+      flex: 0 0 auto; width: 24px; height: 24px; padding: 0; color: var(--color-text-secondary);
+      background: transparent; border: 0; border-radius: 6px; font-size: 20px; line-height: 1;
+    }
+    .toast-close:hover { color: var(--color-text); background: rgba(0,0,0,.06); }
+    .modal-toast-host {
+      position: absolute; top: 8px; left: 50%; z-index: 12; display: none;
+      width: min(720px, calc(100% - 112px)); transform: translateX(-50%);
+    }
+    .modal-toast-host .toast { min-height: 40px; padding: 7px 12px; }
+    .modal-toast-host .toast-section { display: flex; align-items: baseline; gap: 8px; }
+    .modal-toast-host .toast-title { flex: 0 0 auto; margin: 0; white-space: nowrap; }
+    .modal-toast-host .toast-description {
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    main { padding: 16px 20px 36px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-width),100%), 1fr)); gap: 10px; }
+    .item {
+      position: relative; min-width: 0; overflow: hidden; background: #fff;
+      border: 1px solid var(--color-border); border-radius: 8px; cursor: pointer;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+    }
+    .item:hover { border-color: var(--color-primary-hover); box-shadow: 0 2px 8px rgba(0,0,0,.08); transform: translateY(-1px); }
+    .item.last-viewed {
+      border-color: var(--color-primary); background: #e6f4ff;
+      box-shadow: 0 0 0 4px var(--color-primary), 0 9px 28px 8px rgba(5,145,255,.16);
+    }
+    .item.last-viewed::after {
+      content: "上次标注位置"; position: absolute; left: 8px; top: 8px; z-index: 8;
+      padding: 4px 8px; color: #fff; background: var(--color-primary); border: 2px solid #fff;
+      border-radius: 4px; box-shadow: 0 3px 10px rgba(0,48,115,.32);
+      font-size: 12px; font-weight: 600;
+    }
+    .thumb {
+      position: relative; display: block; width: 100%; padding: 0; aspect-ratio: 4 / 3;
+      overflow: hidden; background: #e9edef; border: 0;
+    }
+    .thumb img { width: 100%; height: 100%; display: block; object-fit: contain; }
+    .overlay { position: absolute; pointer-events: none; }
+    .overlay-box {
+      position: absolute; border: 2px solid var(--class-color, var(--single-color));
+      box-shadow: 0 0 0 1px rgba(0,0,0,.68), inset 0 0 0 1px rgba(0,0,0,.45);
+    }
+    body.dark-box .overlay-box { box-shadow: 0 0 0 1px #fff, inset 0 0 0 1px #fff; }
+    .meta { display: block; height: 104px; min-height: 104px; padding: 8px 9px; overflow: hidden; }
+    .name { display: block; overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .details { display: block; margin-top: 5px; color: #707a83; font-size: 11px; line-height: 1.5; }
+    .detail-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .class-summary { display: flex; gap: 4px; min-height: 20px; margin-top: 4px; overflow: hidden; }
+    .class-chip {
+      display: inline-flex; align-items: center; min-width: 0; height: 20px; padding: 0 7px;
+      overflow: hidden; border: 1px solid transparent; border-radius: 4px;
+      font-size: 11px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .class-chip.single { color: #0958d9; background: #e6f4ff; border-color: #91caff; }
+    .class-chip.overall { color: #ad4e00; background: #fff7e6; border-color: #ffd591; }
+    .status {
+      position: absolute; right: 7px; top: 7px; z-index: 4; padding: 4px 7px;
+      color: #44515b; background: rgba(255,255,255,.94); border: 1px solid #ccd3d8;
+      border-radius: 4px; font-size: 11px;
+    }
+    .status.positive { color: #11633f; border-color: #86bda3; }
+    .status.negative { color: #8b3733; border-color: #d3a09d; }
+    .status.unreviewed { color: #744700; border-color: #d8ac58; background: rgba(255,248,225,.96); }
+    .status.uncertain { color: #744700; border-color: #d8ac58; background: rgba(255,248,225,.96); }
+    .status.deleted { color: #555d64; border-color: #aeb5bb; background: rgba(239,241,242,.96); }
+    .revision {
+      position: absolute; left: 7px; bottom: 83px; z-index: 4; padding: 3px 6px;
+      color: #075ea8; background: rgba(255,255,255,.94); border-radius: 3px; font-size: 10px;
+    }
+    .assignee {
+      position: absolute; left: 7px; top: 7px; z-index: 5; max-width: calc(100% - 92px);
+      overflow: hidden; padding: 4px 7px; color: #173d62; background: rgba(225,241,255,.96);
+      border: 1px solid #79aee0; border-radius: 4px; font-size: 11px; font-weight: 700;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .task-chip { display: inline-block; margin-top: 5px; padding: 2px 6px; color: #775100; background: #fff4cf; border-radius: 3px; font-size: 10px; font-weight: 700; }
+    .task-chip.completed { color: #16603d; background: #e5f5eb; }
+    .task-chip.not_required { color: #59646e; background: #edf0f2; }
+    .empty { grid-column: 1 / -1; padding: 70px 20px; color: #69747d; text-align: center; }
+    dialog {
+      width: min(1500px, calc(100vw - 32px)); height: min(930px, calc(100vh - 32px));
+      max-width: none; max-height: none; padding: 0; overflow: hidden; background: #f4f6f7;
+      border: 1px solid #aeb7be; border-radius: 7px; box-shadow: 0 20px 70px rgba(0,0,0,.3);
+    }
+    dialog::backdrop { background: rgba(18,23,27,.72); }
+    .modal-shell { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr) auto; height: 100%; }
+    .modal-head, .modal-actions {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff;
+      border-bottom: 1px solid #d9dee2;
+    }
+    .modal-head { grid-row: 1; }
+    .modal-actions { grid-row: 3; border-top: 1px solid #d9dee2; border-bottom: 0; }
+    .modal-title {
+      min-width: 0; margin-right: auto; overflow: hidden; font-size: 14px;
+      font-weight: 650; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .icon-button {
+      width: 34px; height: 34px; padding: 0; color: #34414b; background: #fff;
+      border: 1px solid #bac2c9; border-radius: 5px; font-size: 22px;
+    }
+    .modal-body { display: grid; grid-row: 2; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 280px; min-height: 0; }
+    .image-panel {
+      display: grid; grid-template-rows: auto minmax(0,1fr); min-width: 0;
+      min-height: 0; border-right: 1px solid #d9dee2;
+    }
+    .panel-title { padding: 9px 12px; color: #53606a; background: #fff; font-size: 12px; border-bottom: 1px solid #e0e4e7; }
+    .image-stage { display: grid; place-items: center; min-height: 0; padding: 10px; overflow: hidden; background: #252a2e; }
+    .image-stage img, #editor-canvas { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+    #editor-canvas { background: #15191c; touch-action: none; }
+    #editor-canvas.drawing { cursor: crosshair; }
+    .box-panel { display: grid; grid-template-rows: auto auto auto auto minmax(0,1fr); min-width: 0; min-height: 0; overflow: hidden; background: #fff; }
+    .annotation-guide {
+      margin: 8px 8px 0; padding: 8px 12px; color: var(--color-text);
+      background: #e6f4ff; border: 1px solid #91caff; border-radius: 8px;
+      font-size: 12px; line-height: 1.6;
+    }
+    .annotation-guide strong { display: block; color: #0958d9; font-weight: 600; }
+    .shortcut-guide { display: block; margin-top: 6px; color: var(--color-text-secondary); }
+    .shortcut-guide kbd {
+      display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-right: 4px;
+      padding: 0 6px; color: var(--color-text); background: var(--color-bg-container);
+      border: 1px solid var(--color-border); border-bottom-width: 2px; border-radius: 4px;
+      font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .box-class-picker { padding: 8px; border-bottom: 1px solid var(--color-split); }
+    .box-class-title { display: block; margin-bottom: 6px; color: var(--color-text-secondary); font-size: 12px; }
+    .class-segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); max-height: 160px; overflow: auto; gap: 4px; padding: 4px; background: #f5f5f5; border-radius: 8px; }
+    .class-option {
+      min-width: 0; min-height: 52px; padding: 6px 8px; color: var(--color-text-secondary);
+      background: transparent; border: 1px solid transparent; border-radius: 6px; text-align: left;
+      transition: color .2s, background .2s, border-color .2s, box-shadow .2s;
+    }
+    .class-option:hover:not(:disabled) { color: var(--color-primary); background: rgba(255,255,255,.7); }
+    .class-option.active { color: var(--color-text); background: #fff; border-color: var(--class-color); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+    .class-option-name { display: block; overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .class-option-help { display: block; overflow: hidden; margin-top: 2px; color: #8c8c8c; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .box-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 9px; border-bottom: 1px solid #e0e4e7; }
+    .status-switch { display: grid; grid-template-columns: 1fr; gap: 5px; padding: 9px; border-bottom: 1px solid #e0e4e7; }
+    .status-option.active { color: #fff; background: #075ea8; border-color: #075ea8; }
+    .box-list { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 6px 9px 14px; }
+    .box-row { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid #edf0f2; font-size: 12px; cursor: pointer; }
+    .box-row.active { color: var(--color-primary-active); background: #e6f4ff; font-weight: 600; }
+    .box-index { display: inline-grid; place-items: center; width: 22px; height: 22px; color: #fff; background: var(--class-color); border-radius: 4px; font-size: 11px; }
+    .box-class-name { max-width: 88px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .box-coordinates { margin-left: auto; color: #78828a; font-size: 10px; }
+    .modal-context { margin-right: auto; color: #66717b; font-size: 12px; }
+    .login-screen { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 20px; background: #edf1f4; }
+    .login-card { width: min(400px, 100%); padding: 28px; background: #fff; border: 1px solid #d3d9de; border-radius: 10px; box-shadow: 0 20px 60px rgba(34,52,67,.18); }
+    .login-card h2 { margin: 0 0 8px; font-size: 21px; }
+    .login-card p { margin: 0 0 20px; color: #68737c; font-size: 13px; line-height: 1.6; }
+    .login-card label { display: block; margin-top: 13px; color: #46515a; font-size: 12px; font-weight: 650; }
+    .login-card input { width: 100%; height: 40px; margin-top: 6px; padding: 0 11px; border: 1px solid #b8c1c8; border-radius: 5px; }
+    .login-card .button { width: 100%; min-height: 42px; margin-top: 20px; }
+    .login-error { min-height: 20px; margin-top: 10px; color: #a1302b; font-size: 12px; }
+    .admin-progress { padding: 8px 20px; color: #0958d9; background: #e6f4ff; border-bottom: 1px solid #91caff; font-size: 12px; white-space: pre-wrap; }
+    .class-legend { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .legend-title { color: var(--color-text-secondary); font-size: 12px; }
+    .legend-dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; }
+    @media (max-width: 900px) {
+      .modal-body { grid-template-columns: 1fr; overflow: auto; }
+      .image-panel { min-height: 380px; border-right: 0; border-bottom: 1px solid #d9dee2; }
+      .box-panel { min-height: 340px; }
+    }
+    @media (max-width: 600px) {
+      .topline, .dataset-nav, .tabs, .toolbar { padding-left: 10px; padding-right: 10px; }
+      .summary { display: none; }
+      .user-pill { display: none; }
+      .toolbar { top: 134px; flex-wrap: wrap; }
+      .toolbar input[type="search"] { width: 100%; }
+      .visible-count { margin-left: 0; }
+      main { padding: 10px 8px 26px; }
+      .grid { gap: 7px; }
+      dialog { width: 100vw; height: 100vh; border: 0; border-radius: 0; }
+      .modal-actions { padding: 8px; }
+      .modal-actions .button { flex: 1; }
+      .image-panel { min-height: 320px; }
+      .toast-host-global { top: 8px; right: 8px; left: 8px; width: auto; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card" autocomplete="on">
+      <h2>Labeler · 图片框标注</h2>
+      <p>请输入分配给你的账号。登录状态在本设备保持 7 天。</p>
+      <label>账号<input id="login-username" name="username" autocomplete="username" required></label>
+      <label>密码<input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
+      <button id="login-button" class="button primary" type="submit">登录</button>
+      <div id="login-error" class="login-error" role="alert"></div>
+    </form>
+  </section>
+  <header>
+    <div class="topline">
+      <h1>Labeler · 图片框标注</h1>
+      <div class="summary"><span id="total-summary"></span><span id="revision-summary"></span></div>
+      <div id="session-controls" class="session-controls hidden"><span id="current-user" class="user-pill"></span><button id="logout" class="button" type="button">退出</button></div>
+    </div>
+    <div class="dataset-nav">多人协作 · 可配置对象类别</div>
+    <nav id="tabs" class="tabs"></nav>
+  </header>
+  <section class="toolbar">
+    <input id="search" type="search" placeholder="筛选图片 ID、来源或分配账号" autocomplete="off">
+    <select id="assignee-filter" class="hidden" aria-label="按分配账号筛选">
+      <option value="">全部分配</option>
+      <option value="unassigned">未分配</option>
+    </select>
+    <div class="class-legend" aria-label="目标类别图例">
+      <span class="legend-title">框类别</span>
+    </div>
+    <label class="thumb-size" title="调整缩略图大小">
+      <span aria-hidden="true">▦</span>
+      <input id="thumb-size" type="range" min="190" max="380" step="10" aria-label="缩略图大小">
+      <span aria-hidden="true">▦</span>
+    </label>
+    <button id="export" class="button" type="button">导出快照</button>
+    <nav class="pager" aria-label="分页">
+      <button class="icon-button page-prev" type="button" title="上一页" aria-label="上一页">‹</button>
+      <span class="page-info"></span>
+      <button class="icon-button page-next" type="button" title="下一页" aria-label="下一页">›</button>
+    </nav>
+    <span id="visible-count" class="visible-count"></span>
+  </section>
+  <div id="notice" class="notice"></div>
+  <div id="admin-progress" class="admin-progress hidden"></div>
+  <main>
+    <section id="grid" class="grid"><p class="empty">正在载入...</p></section>
+    <nav class="pager pager-bottom" aria-label="分页">
+      <button class="icon-button page-prev" type="button" title="上一页" aria-label="上一页">‹</button>
+      <span class="page-info"></span>
+      <button class="icon-button page-next" type="button" title="下一页" aria-label="下一页">›</button>
+    </nav>
+  </main>
+  <div id="toast-host-global" class="toast-host-global">
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+      <span id="toast-icon" class="toast-icon" aria-hidden="true">✓</span>
+      <span class="toast-section">
+        <strong id="toast-title" class="toast-title">操作成功</strong>
+        <span id="toast-description" class="toast-description"></span>
+      </span>
+      <button id="toast-close" class="toast-close" type="button" aria-label="关闭通知">×</button>
+    </div>
+  </div>
+
+  <dialog id="detail-dialog">
+    <div class="modal-shell">
+      <div class="modal-head">
+        <div id="modal-title" class="modal-title"></div>
+        <button id="modal-close" class="icon-button" type="button" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div id="modal-toast-host" class="modal-toast-host"></div>
+      <div class="modal-body">
+        <section class="image-panel">
+          <div class="panel-title">原图</div>
+          <div class="image-stage"><img id="original-image" alt="原图"></div>
+        </section>
+        <section class="image-panel">
+          <div class="panel-title">标注图 · 按类别颜色区分</div>
+          <div class="image-stage"><canvas id="editor-canvas"></canvas></div>
+        </section>
+        <aside class="box-panel">
+          <div class="annotation-guide">
+            <strong id="project-instructions">请按项目规则标注可见对象</strong>
+            <span class="shortcut-guide"><kbd>Q</kbd>新增 / 退出；切换类别也会开始下一框；点击已有框可调整</span>
+          </div>
+          <div id="box-class-picker" class="box-class-picker">
+            <span id="box-class-title" class="box-class-title">新框默认类别</span>
+            <div class="class-segmented" role="radiogroup" aria-labelledby="box-class-title">
+            </div>
+          </div>
+          <div class="box-tools">
+            <button id="draw-box" class="button" type="button" aria-pressed="false"
+              aria-keyshortcuts="Q" title="快捷键 Q：进入或退出新增框模式">新增框（Q）</button>
+            <button id="remove-box" class="button danger" type="button">删除当前框</button>
+            <button id="clear-boxes" class="button danger" type="button">清空框</button>
+            <button id="fit-status" class="button" type="button">按框同步状态</button>
+          </div>
+          <div class="status-switch">
+            <button class="button status-option" data-status="positive" type="button">正样本（有目标，必须画框）</button>
+            <button class="button status-option" data-status="negative" type="button">负样本（无目标，必须无框）</button>
+            <button class="button status-option" data-status="uncertain" type="button">改为不确定（重新进入待标注）</button>
+          </div>
+          <div id="box-list" class="box-list"></div>
+        </aside>
+      </div>
+      <div class="modal-actions">
+        <span id="modal-context" class="modal-context"></span>
+        <button id="delete" class="button danger" type="button">移至删除分组</button>
+        <button id="save" class="button" type="button">保存</button>
+        <button id="save-next" class="button primary" type="button">保存并下一张</button>
+      </div>
+    </div>
+  </dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

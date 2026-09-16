@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labeler-local-web"
+version = "0.1.0"
+description = "Configurable multi-user bounding-box annotation web app"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+images = ["Pillow>=11"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+labeler = "labeler.server:main"
+
+[tool.setuptools.packages.find]
+include = ["labeler*"]
+
+[tool.setuptools.package-data]
+labeler = ["static/*.html", "static/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

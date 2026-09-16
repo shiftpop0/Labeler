@@ -1,0 +1,12 @@
+{
+  "project_id": "parts",
+  "title": "零件检测标注",
+  "schema_version": "parts-v1",
+  "instructions": "分别框选可见螺栓和螺母，框贴合对象边界。",
+  "classes": [
+    {"id": 0, "name": "bolt", "label_zh": "螺栓", "color": "#1677ff"},
+    {"id": 1, "name": "nut", "label_zh": "螺母", "color": "#fa8c16"}
+  ],
+  "annotators": ["worker1", "worker2"],
+  "admin": "admin"
+}

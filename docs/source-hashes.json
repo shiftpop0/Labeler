@@ -1,0 +1,6 @@
+{
+  "src/gold_bullion_detection/multiuser_annotation_web.py": "6a71907230556b47fcd4c74b26df1ad05a90e08b1c8b68d338ffbf767ffad6cb",
+  "apps/annotation_review/index.html": "68db3343d16c0991561f8d8667ee760855fd3fdeabd00a3c268fcd94ef2b26b9",
+  "apps/annotation_review/app.js": "e0efebfc80a40cdd74450f90b04b5171737578fbeac1af8108d4d711179c7994",
+  "tests/test_multiuser_annotation_web.py": "ab6128237eec9f7d5da658d472e0d25b75043644340207c90c8cb8120f366a1e"
+}
