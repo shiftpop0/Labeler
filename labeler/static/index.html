@@ -387,11 +387,12 @@
         <aside class="box-panel">
           <div class="annotation-guide">
             <strong id="project-instructions">请按项目规则标注可见对象</strong>
-            <span class="shortcut-guide"><kbd>Q</kbd>新增 / 退出；切换类别也会开始下一框；点击已有框可调整</span>
+            <span class="shortcut-guide"><kbd>Q</kbd>新增 / 退出；<kbd>W</kbd>切换类别；<kbd>E</kbd>保存并下一张；点击已有框可调整</span>
           </div>
           <div id="box-class-picker" class="box-class-picker">
             <span id="box-class-title" class="box-class-title">新框默认类别</span>
-            <div class="class-segmented" role="radiogroup" aria-labelledby="box-class-title">
+            <div class="class-segmented" role="radiogroup" aria-labelledby="box-class-title"
+              aria-keyshortcuts="W" title="快捷键 W：切换到下一个对象类别">
             </div>
           </div>
           <div class="box-tools">
@@ -413,7 +414,8 @@
         <span id="modal-context" class="modal-context"></span>
         <button id="delete" class="button danger" type="button">移至删除分组</button>
         <button id="save" class="button" type="button">保存</button>
-        <button id="save-next" class="button primary" type="button">保存并下一张</button>
+        <button id="save-next" class="button primary" type="button" aria-keyshortcuts="E"
+          title="快捷键 E：保存并打开下一张">保存并下一张（E）</button>
       </div>
     </div>
   </dialog>

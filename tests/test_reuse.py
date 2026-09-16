@@ -1,6 +1,7 @@
 import copy
 import json
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +10,25 @@ from labeler.backup import backup_workspace
 from labeler.configuration import DEFAULT_CONFIG, validate_config
 from labeler.manifest import read_manifest
 from labeler.yolo import convert
+
+
+def test_annotation_shortcuts_and_deferred_new_box_label() -> None:
+    root = Path(__file__).parents[1]
+    html = (root / "labeler" / "static" / "index.html").read_text(encoding="utf-8")
+    script = (root / "labeler" / "static" / "app.js").read_text(encoding="utf-8")
+
+    assert "<kbd>Q</kbd>新增 / 退出；<kbd>W</kbd>切换类别；<kbd>E</kbd>保存并下一张" in html
+    assert 'aria-keyshortcuts="Q"' in html
+    assert 'aria-keyshortcuts="W"' in html
+    assert 'aria-keyshortcuts="E"' in html
+    assert "if (!['q', 'w', 'e'].includes(key)) return" in script
+    assert "if (key === 'q') toggleDrawMode()" in script
+    assert "if (key === 'w') cycleBoxClass()" in script
+    assert "if (key === 'e') saveCurrent(true)" in script
+    assert "function selectBoxClass(classId)" in script
+    assert "function cycleBoxClass()" in script
+    assert "const isUnfinishedNewBox = index === state.activeBox" in script
+    assert "if (!isUnfinishedNewBox)" in script
 
 
 @pytest.fixture(autouse=True)

@@ -451,17 +451,20 @@
       context.strokeStyle = definition.color;
       context.lineWidth = Math.max(2, 3 * scale);
       context.strokeRect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
-      const label = `${index + 1} · ${definition.label_zh}`;
-      const fontSize = Math.max(13, 15 * scale);
-      context.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-      const labelWidth = Math.min(canvas.width, context.measureText(label).width + 12 * scale);
-      const labelHeight = fontSize + 8 * scale;
-      const labelTop = Math.max(0, box.y1 - labelHeight);
-      const labelLeft = Math.max(0, Math.min(box.x1, canvas.width - labelWidth));
-      context.fillStyle = definition.color;
-      context.fillRect(labelLeft, labelTop, labelWidth, labelHeight);
-      context.fillStyle = '#fff';
-      context.fillText(label, labelLeft + 6 * scale, labelTop + fontSize + 1 * scale);
+      const isUnfinishedNewBox = index === state.activeBox && Boolean(state.drag?.drawing);
+      if (!isUnfinishedNewBox) {
+        const label = `${index + 1} · ${definition.label_zh}`;
+        const fontSize = Math.max(13, 15 * scale);
+        context.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+        const labelWidth = Math.min(canvas.width, context.measureText(label).width + 12 * scale);
+        const labelHeight = fontSize + 8 * scale;
+        const labelTop = Math.max(0, box.y1 - labelHeight);
+        const labelLeft = Math.max(0, Math.min(box.x1, canvas.width - labelWidth));
+        context.fillStyle = definition.color;
+        context.fillRect(labelLeft, labelTop, labelWidth, labelHeight);
+        context.fillStyle = '#fff';
+        context.fillText(label, labelLeft + 6 * scale, labelTop + fontSize + 1 * scale);
+      }
       if (index === state.activeBox) {
         const size = Math.max(7, 10 * scale);
         context.fillStyle = definition.color;
@@ -877,6 +880,30 @@
     renderBoxList();
   }
 
+  function selectBoxClass(classId) {
+    state.defaultClassId = classId;
+    localStorage.setItem('labelerAnnotationDefaultClass', String(classId));
+    if (state.activeBox >= 0 && state.detail?.boxes[state.activeBox]) {
+      assignBoxClass(state.detail.boxes[state.activeBox], classId);
+      renderBoxList();
+      drawEditor();
+      return;
+    }
+    if (state.detail?.status !== 'deleted') state.drawMode = true;
+    renderClassPicker();
+    renderBoxList();
+  }
+
+  function cycleBoxClass() {
+    if (!state.detail || state.detail.status === 'deleted') return;
+    const currentClassId = state.activeBox >= 0 && state.detail.boxes[state.activeBox]
+      ? state.detail.boxes[state.activeBox].class_id
+      : state.defaultClassId;
+    const currentIndex = state.boxClasses.findIndex(item => item.id === Number(currentClassId));
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % state.boxClasses.length : 0;
+    selectBoxClass(state.boxClasses[nextIndex].id);
+  }
+
   document.getElementById('draw-box').addEventListener('click', toggleDrawMode);
   window.addEventListener('keydown', event => {
     const target = event.target;
@@ -885,10 +912,13 @@
       target.isContentEditable
     );
     if (!dialog.open || !state.detail || state.detail.status === 'deleted' || isTyping ||
-        event.repeat || event.ctrlKey || event.altKey || event.metaKey ||
-        event.key.toLowerCase() !== 'q') return;
+        event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+    const key = event.key.toLowerCase();
+    if (!['q', 'w', 'e'].includes(key)) return;
     event.preventDefault();
-    toggleDrawMode();
+    if (key === 'q') toggleDrawMode();
+    if (key === 'w') cycleBoxClass();
+    if (key === 'e') saveCurrent(true);
   });
   if ('ResizeObserver' in window) {
     const mediaResizeObserver = new ResizeObserver(() => fitDetailMedia());
@@ -898,18 +928,7 @@
   document.querySelector('.class-segmented').addEventListener('click', event => {
       const button = event.target.closest('.class-option');
       if (!button || button.disabled) return;
-      const classId = Number(button.dataset.classId);
-      state.defaultClassId = classId;
-      localStorage.setItem('labelerAnnotationDefaultClass', String(classId));
-      if (state.activeBox >= 0 && state.detail?.boxes[state.activeBox]) {
-        assignBoxClass(state.detail.boxes[state.activeBox], classId);
-        renderBoxList();
-        drawEditor();
-      } else {
-        if (state.detail?.status !== 'deleted') state.drawMode = true;
-        renderClassPicker();
-        renderBoxList();
-      }
+      selectBoxClass(Number(button.dataset.classId));
   });
   document.getElementById('remove-box').addEventListener('click', () => {
     if (state.activeBox < 0) return;
